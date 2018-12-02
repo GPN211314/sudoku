@@ -150,7 +150,7 @@ class SD:
         k = 0
         for line in self.puzzle:
             if k != 0 and k % 9 == 0:
-                k += 1
+                k = 0
                 # 求解:
                 self.solvepart(aplz)
                 self.sudoku.write("\n")
