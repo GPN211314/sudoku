@@ -6,7 +6,8 @@ import copy
 
 class SD:
 
-    def __init__(self, flag, arg="puzzle.txt"):
+    def __init__(self, flag, arg="puzzle.txt", switch=-1):
+        self.switch = switch
         self.puzzle = 0
         self.sudoku = 0
         self.grid = []
@@ -19,6 +20,8 @@ class SD:
         self.tmprow = [8]+self.first_row
         self.cur = 1
         self.uncertain = []
+        self.order = []
+        self.perm = []
 
     # 将生成的每一种终局，写入文件
     def write2file(self, grid):
@@ -33,34 +36,32 @@ class SD:
             self.sudoku.write("\n")
 
     # 对一种终局，交换其中一些行，衍生出其它终局
-    def exchange(self):
-        tmpgrid = list(self.grid)
-        grid345 = tmpgrid[3:6]
-        grid678 = tmpgrid[6:]
-        for order_a in [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]:
-            for order_b in [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]:
-                tmpgrid = tmpgrid[:3]+ \
-                    [grid345[order_a[0]], grid345[order_a[1]], grid345[order_a[2]]]+ \
-                    [grid678[order_b[0]], grid678[order_b[1]], grid678[order_b[2]]]
-                self.write2file(tmpgrid)
-                # 当生成并写入相应数目的终局后，关闭文件并退出程序
-                if self.counter == self.number:
-                    self.sudoku.close()
-                    sys.exit(0)
+    def creat_pz(self, n):
+        k = n%40320
+        tmp = int(n/40320)
+        i = int(tmp/6)
+        j = tmp%6
+        self.order = [0,3,6,1,4,7,2,5,8]
+        grid345 = self.order[3:6]
+        grid678 = self.order[6:]
+        order_a = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]
+        self.order = self.order[:3]+ \
+            [grid345[order_a[i][0]], grid345[order_a[i][1]], grid345[order_a[i][2]]]+ \
+            [grid678[order_a[j][0]], grid678[order_a[j][1]], grid678[order_a[j][2]]]
+        return self.creat_grid(self.perm[k])
 
     # 对第一行不同的排列，生成不同的局面
     def creat_grid(self, row):
         self.grid = []
-        for i in range(3):
-            for j in range(3):
-                slice_x = i+3*j
-                self.grid.append(row[-slice_x:]+row[:-slice_x])
+        for slice_x in self.order:
+            self.grid.append(row[-slice_x:]+row[:-slice_x])
+        if self.switch != -1:
+            return self.grid
 
     # 生成第一行的全排列
     def permutation(self, arow):
         if arow == []:
-            self.creat_grid(self.tmprow)
-            self.exchange()
+            self.perm.append(list(self.tmprow))
             return
         for i in arow:
             self.tmprow[self.cur] = i
@@ -71,10 +72,17 @@ class SD:
             self.cur -= 1
         return
 
+    def pmt(self):
+        self.permutation(self.first_row)
+
     def creat(self):
         self.number = int(self.number)
         self.sudoku = open('sudoku.txt', 'w+')
-        self.permutation(self.first_row)
+        self.pmt()
+        for i in range(self.number):
+            self.creat_pz(i)
+            self.write2file(self.grid)
+        self.sudoku.close()
 
     def rowleft(self, row, rnum=-1):
         left = set(range(1, 10))
@@ -183,7 +191,7 @@ def initgd(pzl):
 
 def isnone(row):
     for i in row:
-        if not i:
+        if i:
             return False
     return True
 
