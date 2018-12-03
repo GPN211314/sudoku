@@ -8,5 +8,5 @@
 
 ####     -h 显示当前帮助信息
 
-![image][https://github.com/GPN211314/sudoku/blob/master/img/index.jpg]
+![image][https://github.com/GPN211314/sudoku/raw/master/img/index.jpg]
 
