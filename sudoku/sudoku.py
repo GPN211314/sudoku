@@ -149,7 +149,7 @@ class SD:
         self.sudoku = open('sudoku.txt', 'w+')
         k = 0
         for line in self.puzzle:
-            if k == 9:
+            if k != 0 and k % 9 == 0:
                 k = 0
                 # 求解:
                 self.solvepart(aplz)
