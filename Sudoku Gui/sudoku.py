@@ -6,27 +6,28 @@ import copy
 
 class SD:
 
-    def __init__(self, flag, arg="puzzle.txt", switch=-1):
-        self.switch = switch
-        self.puzzle = 0
+    def __init__(self, flag, arg):
+        # sudoku.txt文件句柄
         self.sudoku = 0
-        self.grid = []
-        self.number = arg
+        # 待解数独文件路径或待生成终局数
+        self.arg = arg
+        # -c -s 参数
         self.flag = flag
-        self.path = arg
-        self.counter = 0
+        # 第一行的初始状态
         self.first_row = list(range(1, 10))
         self.first_row.remove(8)
         self.tmprow = [8]+self.first_row
+        #
         self.cur = 1
         self.uncertain = []
+        # 第一行右转数
         self.order = []
+        # 第一行的全排列
         self.perm = []
 
     # 将生成的每一种终局，写入文件
-    def write2file(self, grid):
-        self.counter += 1
-        if self.counter != 1:
+    def write2file(self, grid, i):
+        if i != 0:
             self.sudoku.write("\n")
         for i in range(9):
             for j in range(9):
@@ -52,11 +53,10 @@ class SD:
 
     # 对第一行不同的排列，生成不同的局面
     def creat_grid(self, row):
-        self.grid = []
+        grid = []
         for slice_x in self.order:
-            self.grid.append(row[-slice_x:]+row[:-slice_x])
-        if self.switch != -1:
-            return self.grid
+            grid.append(row[-slice_x:]+row[:-slice_x])
+        return grid
 
     # 生成第一行的全排列
     def permutation(self, arow):
@@ -76,12 +76,11 @@ class SD:
         self.permutation(self.first_row)
 
     def creat(self):
-        self.number = int(self.number)
+        number = int(self.arg)
         self.sudoku = open('sudoku.txt', 'w+')
         self.pmt()
-        for i in range(self.number):
-            self.creat_pz(i)
-            self.write2file(self.grid)
+        for i in range(number):
+            self.write2file(self.creat_pz(i), i)
         self.sudoku.close()
 
     def rowleft(self, row, rnum=-1):
@@ -103,8 +102,7 @@ class SD:
             row.append(self.rowleft(currentgrid[i], i))
             col.append(self.rowleft([rowincg[i] for rowincg in currentgrid]))
             part.append(self.rowleft(comb(currentgrid, 3*(int(i/3)), 3*(i%3))))
-        # 如果行约束列表全为空，则已经全部填满
-        if isnone(row):
+        if not self.uncertain:
             return currentgrid
 
         tmpcurgrid = copy.deepcopy(currentgrid)
@@ -113,7 +111,7 @@ class SD:
             tmpcurgrid[ele[0]][ele[1]] = \
                 row[ele[0]].intersection(col[ele[1]]).intersection(
                     part[(3*int(ele[0]/3)+int(ele[1]/3))%9])
-        # 如果约束交集和本身相等,则说明不存在唯一确定的解，将其取值集合pop至剩余一个元素，再递归求解
+        # 如果约束交集和本身相等,则说明不存在唯一确定的解，任取一个（此处不妨取第一个）取值集合pop至剩余一个元素，再递归求解
         if tmpcurgrid == currentgrid:
             tmpset = tmpcurgrid[self.uncertain[0][0]][self.uncertain[0][1]]
             for i in range(len(tmpset)-1):
@@ -145,10 +143,10 @@ class SD:
     # 每次从文件中读取一个问题并将终局写入解文件
     def dispart(self):
         aplz = []
-        self.puzzle = open(self.path)
+        puzzlefile = open(self.arg)
         self.sudoku = open('sudoku.txt', 'w+')
         k = 0
-        for line in self.puzzle:
+        for line in puzzlefile:
             if k == 9:
                 k = 0
                 # 求解:
@@ -159,7 +157,7 @@ class SD:
                 aplz.append(list(map(int, line.split())))
                 k += 1
         self.solvepart(aplz)
-        self.puzzle.close()
+        puzzlefile.close()
         self.sudoku.close()
 
     def main(self):
