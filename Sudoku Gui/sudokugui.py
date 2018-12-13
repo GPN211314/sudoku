@@ -19,10 +19,9 @@ class Mygui:
         self.value = [[0 for i in range(11)] for j in range(11)]
         self.ety = [[0 for i in range(11)] for j in range(11)]
         self.tmp = sudoku.SD(0, 0)
-        self.tmp.pmt()
 
     def bind(self):
-        value_ls = self.tmp.creat_pz(self.count)
+        value_ls = self.tmp.create_pz(self.count, sudoku.all_perm)
         infl1 = [0, 1, 2, 4, 5, 6, 8, 9, 10]
         infl2 = [(0, 0), (0, 3), (0, 6), (3, 0), (3, 3), (3, 6), (6, 0), (6, 3), (6, 6)]
         rmlist1 = []
@@ -67,9 +66,9 @@ class Mygui:
         col = []
         part = []
         for i in range(9):
-            row.append(self.tmp.rowleft(grid[i]))
-            col.append(self.tmp.rowleft([rowig[i] for rowig in grid]))
-            part.append(self.tmp.rowleft(sudoku.comb(grid, 3*(int(i/3)), 3*(i % 3))))
+            row.append(sudoku.row_left(grid[i]))
+            col.append(sudoku.row_left([rowig[i] for rowig in grid]))
+            part.append(sudoku.row_left(sudoku.comb(grid, 3*(int(i/3)), 3*(i % 3))))
         if sudoku.isnone(row) and sudoku.isnone(col) and sudoku.isnone(part):
             messagebox.showinfo('Result', 'Perfect!!!')
         else:

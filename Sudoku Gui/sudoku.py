@@ -1,14 +1,17 @@
 #!/usr/bin/env python
-#coding:utf-8
+# coding:utf-8
 
 import sys
-import copy
+import numpy as np
+import time
+from perm import all_perm
+
 
 class SD:
 
     def __init__(self, flag, arg):
         # sudoku.txt文件句柄
-        self.sudoku = 0
+        self.sudoku = open('sudoku.txt', 'w+')
         # 待解数独文件路径或待生成终局数
         self.arg = arg
         # -c -s 参数
@@ -16,157 +19,182 @@ class SD:
         # 第一行的初始状态
         self.first_row = list(range(1, 10))
         self.first_row.remove(8)
-        self.tmprow = [8]+self.first_row
+        self.tmp_row = [8]+self.first_row
         #
         self.cur = 1
-        self.uncertain = []
         # 第一行右转数
         self.order = []
         # 第一行的全排列
-        self.perm = []
+        # self.perm = perm.all_perm
+
+        self.mark = []
+        self.row = []
+        self.col = []
+        self.part = []
+        self.a_plz = []
 
     # 将生成的每一种终局，写入文件
     def write2file(self, grid, i):
         if i != 0:
             self.sudoku.write("\n")
-        for i in range(9):
+        for k in range(9):
             for j in range(9):
                 if j != 0:
                     self.sudoku.write(" ")
-                self.sudoku.write(str(grid[i][j]))
+                self.sudoku.write(str(grid[k][j]))
             self.sudoku.write("\n")
 
     # 对一种终局，交换其中一些行，衍生出其它终局
-    def creat_pz(self, n):
-        k = n%40320
+    def create_pz(self, n, perm):
+        k = n % 40320
         tmp = int(n/40320)
         i = int(tmp/6)
-        j = tmp%6
-        self.order = [0,3,6,1,4,7,2,5,8]
+        j = tmp % 6
+        self.order = [0, 3, 6, 1, 4, 7, 2, 5, 8]
         grid345 = self.order[3:6]
         grid678 = self.order[6:]
         order_a = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]
-        self.order = self.order[:3]+ \
-            [grid345[order_a[i][0]], grid345[order_a[i][1]], grid345[order_a[i][2]]]+ \
+        self.order = self.order[:3] + \
+            [grid345[order_a[i][0]], grid345[order_a[i][1]], grid345[order_a[i][2]]] + \
             [grid678[order_a[j][0]], grid678[order_a[j][1]], grid678[order_a[j][2]]]
-        return self.creat_grid(self.perm[k])
+        return self.create_grid(perm[k])
 
     # 对第一行不同的排列，生成不同的局面
-    def creat_grid(self, row):
+    def create_grid(self, row):
         grid = []
         for slice_x in self.order:
             grid.append(row[-slice_x:]+row[:-slice_x])
         return grid
 
+    '''
     # 生成第一行的全排列
-    def permutation(self, arow):
-        if arow == []:
-            self.perm.append(list(self.tmprow))
+    def permutation(self, a_row):
+        if not a_row:
+            self.perm.append(list(self.tmp_row))
             return
-        for i in arow:
-            self.tmprow[self.cur] = i
+        for i in a_row:
+            self.tmp_row[self.cur] = i
             self.cur += 1
-            tmpls = list(arow)
-            tmpls.remove(i)
-            self.permutation(tmpls)
+            tmp_ls = list(a_row)
+            tmp_ls.remove(i)
+            self.permutation(tmp_ls)
             self.cur -= 1
         return
 
     def pmt(self):
         self.permutation(self.first_row)
+    '''
 
-    def creat(self):
+    def create(self):
+        time_start = time.time()
         number = int(self.arg)
-        self.sudoku = open('sudoku.txt', 'w+')
-        self.pmt()
+        # self.pmt()
+        perm = all_perm
         for i in range(number):
-            self.write2file(self.creat_pz(i), i)
+            self.write2file(self.create_pz(i, perm), i)
+        time_end = time.time()
         self.sudoku.close()
+        print("总时长：", time_end - time_start, "s")
 
-    def rowleft(self, row, rnum=-1):
-        left = set(range(1, 10))
-        for i in range(9):
-            if len(row[i]) == 1:
-                left.difference_update(row[i])
-            elif rnum != -1:
-                self.uncertain.append([rnum, i])
-        return left
+    def find_next(self, row_n, col_n, head):
+        part_n = find_part(row_n, col_n)
+        for i in range(head, 10):
+            if self.row[row_n][i] and self.col[col_n][i] and self.part[part_n][i]:
+                return i
+        return 0
 
-    # 递归求解核心
-    def core(self, currentgrid):
-        # 计算行、列、区约束
-        row = []
-        col = []
-        part = []
-        for i in range(9):
-            row.append(self.rowleft(currentgrid[i], i))
-            col.append(self.rowleft([rowincg[i] for rowincg in currentgrid]))
-            part.append(self.rowleft(comb(currentgrid, 3*(int(i/3)), 3*(i%3))))
-        if not self.uncertain:
-            return currentgrid
+    def rule(self, row_n, col_n, med):
+        value = self.a_plz[row_n][col_n]
+        part_n = find_part(row_n, col_n)
+        self.row[row_n][value] = med
+        self.col[col_n][value] = med
+        self.part[part_n][value] = med
 
-        tmpcurgrid = copy.deepcopy(currentgrid)
-        # 对每个不确定的空格，求其行、列、区约束的交集
-        for ele in self.uncertain:
-            tmpcurgrid[ele[0]][ele[1]] = \
-                row[ele[0]].intersection(col[ele[1]]).intersection(
-                    part[(3*int(ele[0]/3)+int(ele[1]/3))%9])
-        # 如果约束交集和本身相等,则说明不存在唯一确定的解，任取一个（此处不妨取第一个）取值集合pop至剩余一个元素，再递归求解
-        if tmpcurgrid == currentgrid:
-            tmpset = tmpcurgrid[self.uncertain[0][0]][self.uncertain[0][1]]
-            for i in range(len(tmpset)-1):
-                tmpset.pop()
-        self.uncertain = []
-        return self.core(tmpcurgrid)
-
-    # 解数独函数
-    def solve(self, puzzle):
-        tmpuzzle = list(puzzle)
-        initgrid = initgd(tmpuzzle)
-        answer = self.core(initgrid)
-        return answer
-
-    # 解当前的问题，并写入解文件
-    def solvepart(self, apuzzle):
-        ans = self.solve(apuzzle)
-        # 将集合形式的解转换成整型
+    def create_mark(self):
         for i in range(9):
             for j in range(9):
-                ans[i][j] = ans[i][j].pop()
+                if self.a_plz[i][j] == 0:
+                    # 所有的空格标为True
+                    self.mark[i][j] = True
+                else:
+                    # 非空的将其三个约束列表置False
+                    self.rule(i, j, False)
+
+    def solve(self, row_n, col_n):
+        # 如果当前列超出总列数则进入下一行第一列
+        if col_n == 9:
+            row_n += 1
+            col_n = 0
+        # 直到找到一个空格
+        while True:
+            # 若遍历完仍没有空，说明已完成填空，返回
+            if row_n > 8:
+                return True
+            if self.mark[row_n][col_n]:
+                break
+
+            col_n += 1
+            if col_n == 9:
+                row_n += 1
+                col_n = 0
+        while True:
+            self.a_plz[row_n][col_n] = self.find_next(row_n, col_n, self.a_plz[row_n][col_n] + 1)
+            if self.a_plz[row_n][col_n] == 0:
+                break
+            self.rule(row_n, col_n, False)
+            tmp_flag = self.solve(row_n, col_n+1)
+            if tmp_flag:
+                return True
+            self.rule(row_n, col_n, True)
+        return False
+
+    def core(self):
+        # 初始化列表
+        self.mark = np.zeros([10, 10], bool)
+        self.row = np.ones([10, 10], bool)
+        self.col = np.ones([10, 10], bool)
+        self.part = np.ones([10, 10], bool)
+        # 将所有未填的空标为True
+        self.create_mark()
+        if not self.solve(0, 0):
+            print("文件中存在无解数独")
+
+    # 解当前的问题，并写入解文件
+    def solve_part(self):
+        self.core()
         for i in range(9):
             for j in range(9):
                 if j != 0:
                     self.sudoku.write(" ")
-                self.sudoku.write(str(ans[i][j]))
+                self.sudoku.write(str(self.a_plz[i][j]))
             self.sudoku.write("\n")
 
     # 每次从文件中读取一个问题并将终局写入解文件
-    def dispart(self):
-        aplz = []
-        puzzlefile = open(self.arg)
-        self.sudoku = open('sudoku.txt', 'w+')
+    def detach(self):
+        puzzle_file = open(self.arg)
         k = 0
-        for line in puzzlefile:
+        for line in puzzle_file:
             if k == 9:
                 k = 0
                 # 求解:
-                self.solvepart(aplz)
+                self.solve_part()
                 self.sudoku.write("\n")
-                aplz = []
+                self.a_plz = []
             else:
-                aplz.append(list(map(int, line.split())))
+                self.a_plz.append(list(map(int, line.split())))
                 k += 1
-        self.solvepart(aplz)
-        puzzlefile.close()
+        self.solve_part()
+        puzzle_file.close()
         self.sudoku.close()
 
     def main(self):
         if self.flag == '-c':
-            self.creat()
+            self.create()
         elif self.flag == '-s':
-            self.dispart()
+            self.detach()
 
-def helpinformation():
+
+def help_information():
     print("sudoku.exe [选项] 参数")
     print("选项：")
     print("    -c <数字>\t生成<数字>个数独终局至文件sudoku.txt")
@@ -174,18 +202,25 @@ def helpinformation():
     print("    -h 显示当前帮助信息")
     sys.exit(0)
 
-    # 构造初始状态列表
-def initgd(pzl):
-    ini = []
+
+def find_part(row_n, col_n):
+    return 3*int(row_n/3)+int(col_n/3)
+
+
+def comb(a_grid, coord_x, coord_y):
+    tmp_art = []
+    for i in range(3):
+        tmp_art += a_grid[coord_x+i][coord_y:coord_y+3]
+    return tmp_art
+
+
+def row_left(row):
+    left = set(range(1, 10))
     for i in range(9):
-        tls = []
-        for j in range(9):
-            if pzl[i][j] == 0:
-                tls.append({})
-            else:
-                tls.append({pzl[i][j]})
-        ini.append(tls)
-    return ini
+        if len(row[i]) == 1:
+            left.difference_update(row[i])
+    return left
+
 
 def isnone(row):
     for i in row:
@@ -193,22 +228,17 @@ def isnone(row):
             return False
     return True
 
-def comb(agrid, coor_x, coor_y):
-    tmpart = []
-    for i in range(3):
-        tmpart += agrid[coor_x+i][coor_y:coor_y+3]
-    return tmpart
 
 def main(argv):
     if len(argv) != 3:
-        helpinformation()
+        help_information()
 
     if argv[1] == '-c' and not argv[2].isdigit():
         print("-c 的参数必须为数字")
         sys.exit(0)
 
-    shudu = SD(argv[1], argv[2])
-    shudu.main()
+    sd = SD(argv[1], argv[2])
+    sd.main()
 
 
 if __name__ == '__main__':
