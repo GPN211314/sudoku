@@ -2,16 +2,18 @@
 # coding:utf-8
 
 import sys
-import numpy as np
+from libc.stdio cimport FILE, fopen, fclose, fputs, fgets, feof, fputc
 import time
-from perm import all_perm
 
+cdef class SD:
+    cdef FILE* sudoku
+    cdef list first_row, tmp_row, order, a_plz, mark, row, col, part, perm
+    cdef str flag, arg
+    cdef int cur
 
-class SD:
-
-    def __init__(self, flag, arg):
+    def __init__(self, flag = "", arg = ""):
         # sudoku.txt文件句柄
-        self.sudoku = open('sudoku.txt', 'w+')
+        self.sudoku = fopen('sudoku.txt', 'w+')
         # 待解数独文件路径或待生成终局数
         self.arg = arg
         # -c -s 参数
@@ -25,50 +27,57 @@ class SD:
         # 第一行右转数
         self.order = []
         # 第一行的全排列
-        # self.perm = perm.all_perm
-
+        self.perm = []
+        # 标记空位
         self.mark = []
+        # 记录在行方向各个数值的占用情况
         self.row = []
+        # 记录在列方向各个数值的占用情况
         self.col = []
+        # 记录在各区中各个数值的占用情况
         self.part = []
+        # 用来保存单个数独题目
         self.a_plz = []
 
+
     # 将生成的每一种终局，写入文件
-    def write2file(self, grid, i):
+    cdef void write2file(self, list grid,int i):
         if i != 0:
-            self.sudoku.write("\n")
+            fputs("\n", self.sudoku)
         for k in range(9):
             for j in range(9):
                 if j != 0:
-                    self.sudoku.write(" ")
-                self.sudoku.write(str(grid[k][j]))
-            self.sudoku.write("\n")
+                    fputs(" ", self.sudoku)
+                fputc(grid[k][j] + 48, self.sudoku)
+            fputs("\n", self.sudoku)
 
+    def create_puzzle(self, n):
+        return self.create_pz(n)
     # 对一种终局，交换其中一些行，衍生出其它终局
-    def create_pz(self, n, perm):
-        k = n % 40320
-        tmp = int(n/40320)
-        i = int(tmp/6)
-        j = tmp % 6
+    cdef list create_pz(self, int n):
+        cdef int k = n % 40320
+        cdef int tmp = n//40320
+        cdef i = tmp//6
+        cdef j = tmp % 6
         self.order = [0, 3, 6, 1, 4, 7, 2, 5, 8]
-        grid345 = self.order[3:6]
-        grid678 = self.order[6:]
-        order_a = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]
+        cdef list grid345 = self.order[3:6]
+        cdef list grid678 = self.order[6:]
+        cdef list order_a = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]]
         self.order = self.order[:3] + \
             [grid345[order_a[i][0]], grid345[order_a[i][1]], grid345[order_a[i][2]]] + \
             [grid678[order_a[j][0]], grid678[order_a[j][1]], grid678[order_a[j][2]]]
-        return self.create_grid(perm[k])
+        return self.create_grid(self.perm[k])
 
     # 对第一行不同的排列，生成不同的局面
-    def create_grid(self, row):
-        grid = []
+    cdef list create_grid(self,list row):
+        cdef list grid = []
         for slice_x in self.order:
             grid.append(row[-slice_x:]+row[:-slice_x])
         return grid
 
-    '''
     # 生成第一行的全排列
-    def permutation(self, a_row):
+    cdef void permutation(self,list a_row):
+        cdef list tmp_ls
         if not a_row:
             self.perm.append(list(self.tmp_row))
             return
@@ -79,38 +88,32 @@ class SD:
             tmp_ls.remove(i)
             self.permutation(tmp_ls)
             self.cur -= 1
-        return
 
-    def pmt(self):
+    def  pmt(self):
         self.permutation(self.first_row)
-    '''
 
-    def create(self):
-        time_start = time.time()
-        number = int(self.arg)
-        # self.pmt()
-        perm = all_perm
+    cdef void create(self):
+        cdef int number = int(self.arg)
+        self.pmt()
         for i in range(number):
-            self.write2file(self.create_pz(i, perm), i)
-        time_end = time.time()
-        self.sudoku.close()
-        print("总时长：", time_end - time_start, "s")
+            self.write2file(self.create_pz(i), i)
+        fclose(self.sudoku)
 
-    def find_next(self, row_n, col_n, head):
-        part_n = find_part(row_n, col_n)
+    cdef int find_next(self, int row_n, int col_n, int head):
+        cdef int part_n = find_part(row_n, col_n)
         for i in range(head, 10):
             if self.row[row_n][i] and self.col[col_n][i] and self.part[part_n][i]:
                 return i
         return 0
 
-    def rule(self, row_n, col_n, med):
-        value = self.a_plz[row_n][col_n]
-        part_n = find_part(row_n, col_n)
+    cdef void rule(self, int row_n, int col_n, bint med):
+        cdef int value = self.a_plz[row_n][col_n]
+        cdef int part_n = find_part(row_n, col_n)
         self.row[row_n][value] = med
         self.col[col_n][value] = med
         self.part[part_n][value] = med
 
-    def create_mark(self):
+    cdef void create_mark(self):
         for i in range(9):
             for j in range(9):
                 if self.a_plz[i][j] == 0:
@@ -120,7 +123,7 @@ class SD:
                     # 非空的将其三个约束列表置False
                     self.rule(i, j, False)
 
-    def solve(self, row_n, col_n):
+    cdef bint solve(self,int row_n, int col_n):
         # 如果当前列超出总列数则进入下一行第一列
         if col_n == 9:
             row_n += 1
@@ -132,7 +135,6 @@ class SD:
                 return True
             if self.mark[row_n][col_n]:
                 break
-
             col_n += 1
             if col_n == 9:
                 row_n += 1
@@ -148,98 +150,59 @@ class SD:
             self.rule(row_n, col_n, True)
         return False
 
-    def core(self):
+    cdef void core(self):
         # 初始化列表
-        self.mark = np.zeros([10, 10], bool)
-        self.row = np.ones([10, 10], bool)
-        self.col = np.ones([10, 10], bool)
-        self.part = np.ones([10, 10], bool)
+        self.mark = [[False for _ in range(11)] for _ in range(11)]
+        self.row = [[True for _ in range(11)] for _ in range(11)]
+        self.col = [[True for _ in range(11)] for _ in range(11)]
+        self.part = [[True for _ in range(11)] for _ in range(11)]
         # 将所有未填的空标为True
         self.create_mark()
         if not self.solve(0, 0):
             print("文件中存在无解数独")
+            sys.exit(0)
 
     # 解当前的问题，并写入解文件
-    def solve_part(self):
+    cdef void solve_part(self):
         self.core()
         for i in range(9):
             for j in range(9):
                 if j != 0:
-                    self.sudoku.write(" ")
-                self.sudoku.write(str(self.a_plz[i][j]))
-            self.sudoku.write("\n")
+                    fputs(" ", self.sudoku)
+                fputc(self.a_plz[i][j] + 48, self.sudoku)
+            fputs("\n", self.sudoku)
 
     # 每次从文件中读取一个问题并将终局写入解文件
-    def detach(self):
-        puzzle_file = open(self.arg)
-        k = 0
-        for line in puzzle_file:
-            if k == 9:
-                k = 0
+    cdef void detach(self):
+        cdef FILE* puzzle_file = fopen(self.arg.encode(), 'r')
+        cdef char line[30]
+        cdef int k = 0
+        while True:
+            if feof(puzzle_file) != 0:
+                break
+            fgets(line, 30, puzzle_file)
+            if k % 9 == 0 and k!= 0:
                 # 求解:
+                if k != 9:
+                    fputs("\n", self.sudoku)
                 self.solve_part()
-                self.sudoku.write("\n")
                 self.a_plz = []
             else:
-                self.a_plz.append(list(map(int, line.split())))
+                self.a_plz.append(list(map(int, (line.decode()).split())))
                 k += 1
-        self.solve_part()
-        puzzle_file.close()
-        self.sudoku.close()
+        # self.solve_part()
+        fclose(puzzle_file)
+        fclose(self.sudoku)
 
     def main(self):
+        cdef double time_start = time.time()
         if self.flag == '-c':
             self.create()
         elif self.flag == '-s':
             self.detach()
+        cdef double time_end = time.time()
+        print("总时长：%f s"% (time_end - time_start))
 
 
-def help_information():
-    print("sudoku.exe [选项] 参数")
-    print("选项：")
-    print("    -c <数字>\t生成<数字>个数独终局至文件sudoku.txt")
-    print("    -s <绝对路径>\t从<绝对路径>中读取数独题目并生成一个可行解至sudoku.txt")
-    print("    -h 显示当前帮助信息")
-    sys.exit(0)
-
-
-def find_part(row_n, col_n):
-    return 3*int(row_n/3)+int(col_n/3)
-
-
-def comb(a_grid, coord_x, coord_y):
-    tmp_art = []
-    for i in range(3):
-        tmp_art += a_grid[coord_x+i][coord_y:coord_y+3]
-    return tmp_art
-
-
-def row_left(row):
-    left = set(range(1, 10))
-    for i in range(9):
-        if len(row[i]) == 1:
-            left.difference_update(row[i])
-    return left
-
-
-def isnone(row):
-    for i in row:
-        if i:
-            return False
-    return True
-
-
-def main(argv):
-    if len(argv) != 3:
-        help_information()
-
-    if argv[1] == '-c' and not argv[2].isdigit():
-        print("-c 的参数必须为数字")
-        sys.exit(0)
-
-    sd = SD(argv[1], argv[2])
-    sd.main()
-
-
-if __name__ == '__main__':
-    main(sys.argv)
+cdef int find_part(int row_n, int col_n):
+    return 3*(row_n//3)+(col_n//3)
