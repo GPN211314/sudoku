@@ -34,7 +34,7 @@ def help_information():
 
 
 def main(argv):
-    if len(argv) != 3:
+    if len(argv) != 3 or argv[1] not in ['-c', '-s', '-h'] :
         help_information()
 
     if argv[1] == '-c' and not argv[2].isdigit():
