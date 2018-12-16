@@ -3,7 +3,6 @@
 
 import sys
 from libc.stdio cimport FILE, fopen, fclose, fputs, fgets, feof, fputc
-import time
 
 cdef class SD:
     cdef FILE* sudoku
@@ -11,7 +10,7 @@ cdef class SD:
     cdef str flag, arg
     cdef int cur
 
-    def __init__(self, flag, arg):
+    def __init__(self, flag="", arg=""):
         # sudoku.txt文件句柄
         self.sudoku = fopen('sudoku.txt', 'w+')
         # 待解数独文件路径或待生成终局数
@@ -39,6 +38,7 @@ cdef class SD:
         # 用来保存单个数独题目
         self.a_plz = []
 
+
     # 将生成的每一种终局，写入文件
     cdef void write2file(self, list grid,int i):
         if i != 0:
@@ -50,6 +50,8 @@ cdef class SD:
                 fputc(grid[k][j] + 48, self.sudoku)
             fputs("\n", self.sudoku)
 
+    def create_puzzle(self, n):
+        return self.create_pz(n)
     # 对一种终局，交换其中一些行，衍生出其它终局
     cdef list create_pz(self, int n):
         cdef int k = n % 40320
@@ -86,7 +88,7 @@ cdef class SD:
             self.permutation(tmp_ls)
             self.cur -= 1
 
-    cdef void pmt(self):
+    def  pmt(self):
         self.permutation(self.first_row)
 
     cdef void create(self):
@@ -192,13 +194,10 @@ cdef class SD:
         fclose(self.sudoku)
 
     def main(self):
-        cdef double time_start = time.time()
         if self.flag == '-c':
             self.create()
         elif self.flag == '-s':
             self.detach()
-        cdef double time_end = time.time()
-        print("总时长：%f s"% (time_end - time_start))
 
 
 cdef int find_part(int row_n, int col_n):

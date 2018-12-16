@@ -1,7 +1,11 @@
 #!/usr/bin/env python
 # coding:utf-8
 import sys
-import sudoku
+import sudoku_calc
+from pycallgraph import PyCallGraph
+from pycallgraph.output import GraphvizOutput
+from pycallgraph import Config
+from pycallgraph import GlobbingFilter
 
 def comb(a_grid, coord_x, coord_y):
     tmp_art = []
@@ -34,16 +38,21 @@ def help_information():
 
 
 def main(argv):
-    if len(argv) != 3 or argv[1] not in ['-c', '-s', '-h'] :
+    if len(argv) != 3 or argv[1] not in ['-c', '-s', '-h']:
         help_information()
 
     if argv[1] == '-c' and not argv[2].isdigit():
         print("-c 的参数必须为数字")
         sys.exit(0)
 
-    sd = sudoku.SD(argv[1], argv[2])
-    sd.main()
+    sudoku_instance = sudoku_calc.SD(argv[1], argv[2])
+    sudoku_instance.main()
 
 
 if __name__ == '__main__':
-    main(sys.argv)
+    config = Config()
+    config.trace_filter = GlobbingFilter(include=[ 'main', 'sudoku_calc.SD.*' ])
+    graphviz = GraphvizOutput()
+    graphviz.output_file = 'solve.png'
+    with PyCallGraph(output=graphviz, config=config):
+        main(sys.argv)
