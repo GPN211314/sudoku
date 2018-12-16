@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 # coding:utf-8
 
-from PIL import Image, ImageTk
 import tkinter as tk
-from tkinter import messagebox
-from icon import img_ico, img_jpg
 import base64
 import os
-import sudokumain
-import sudoku
 import random
+from tkinter import messagebox
+from PIL import Image, ImageTk
+import sudoku_calc
+import sudoku
+from icon import JPG_IMG, ICO_IMG
 
 
 class Mygui:
@@ -20,7 +20,7 @@ class Mygui:
         self.coord = []
         self.value = [[0 for i in range(11)] for j in range(11)]
         self.ety = [[0 for i in range(11)] for j in range(11)]
-        self.tmp = sudoku.SD()
+        self.tmp = sudoku_calc.SD()
         self.tmp.pmt()
 
     def bind(self):
@@ -34,12 +34,12 @@ class Mygui:
                 self.value[infl1[i]][infl1[j]].set(value_ls[i][j])
                 self.ety[infl1[i]][infl1[j]]['state'] = 'readonly'
                 self.ety[infl1[i]][infl1[j]]['fg'] = 'red'
-                rmlist2.append((i,j))
+                rmlist2.append((i, j))
 
             # 保证每个区至少有两个挖空
-            ls = list(range(9))
-            coord_a = ls.pop(random.randint(0, 8))
-            coord_b = ls.pop(random.randint(0, 7))
+            tmp_ls = list(range(9))
+            coord_a = tmp_ls.pop(random.randint(0, 8))
+            coord_b = tmp_ls.pop(random.randint(0, 7))
             rmlist1.append(tuple(map(lambda x, y: x+y, (int(coord_a/3), coord_a%3), infl2[i])))
             rmlist1.append(tuple(map(lambda x, y: x+y, (int(coord_b/3), coord_b%3), infl2[i])))
 
@@ -66,15 +66,15 @@ class Mygui:
         self.count += 1
 
     def check(self):
-        f = [0, 1, 2, 4, 5, 6, 8, 9, 10]
+        hash_ls = [0, 1, 2, 4, 5, 6, 8, 9, 10]
         grid = [[0 for i in range(9)] for j in range(9)]
 
         # 输入不合法时报错
         for i in range(9):
             for j in range(9):
-                grid[i][j] = self.value[f[i]][f[j]].get()
+                grid[i][j] = self.value[hash_ls[i]][hash_ls[j]].get()
                 if grid[i][j] not in list(map(str, list(range(1, 10)))):
-                    messagebox.showerror('Result',  'Wrong Answer!')
+                    messagebox.showerror('Result', 'Wrong Answer!')
                     return
                 grid[i][j] = {int(grid[i][j])}
 
@@ -82,10 +82,10 @@ class Mygui:
         col = []
         part = []
         for i in range(9):
-            row.append(sudokumain.row_left(grid[i]))
-            col.append(sudokumain.row_left([rowig[i] for rowig in grid]))
-            part.append(sudokumain.row_left(sudokumain.comb(grid, 3*(int(i/3)), 3*(i % 3))))
-        if sudokumain.isnone(row) and sudokumain.isnone(col) and sudokumain.isnone(part):
+            row.append(sudoku.row_left(grid[i]))
+            col.append(sudoku.row_left([rowig[i] for rowig in grid]))
+            part.append(sudoku.row_left(sudoku.comb(grid, 3*(int(i/3)), 3*(i % 3))))
+        if sudoku.isnone(row) and sudoku.isnone(col) and sudoku.isnone(part):
             messagebox.showinfo('Result', 'Perfect!')
         else:
             messagebox.showerror('Result', 'Wrong Answer!')
@@ -98,19 +98,19 @@ class Mygui:
         root.title("Sudoku")
 
         # 从文件中读取并解码生成临时图标，用完后立马删除
-        tmp = open("tmp.ico","wb+")
-        tmp.write(base64.b64decode(img_ico))
+        tmp = open("tmp.ico", "wb+")
+        tmp.write(base64.b64decode(ICO_IMG))
         tmp.close()
         #im = Image.open("tmp.ico")
         #img = ImageTk.PhotoImage(im)
         #root.tk.call('wm', 'iconphoto', root._w, img)
         root.iconbitmap('tmp.ico')
         os.remove("tmp.ico")
-        tmp = open("tmp.jpg","wb+")
-        tmp.write(base64.b64decode(img_jpg))
+        tmp = open("tmp.jpg", "wb+")
+        tmp.write(base64.b64decode(JPG_IMG))
         tmp.close()
-        im = Image.open("tmp.jpg")
-        photo = ImageTk.PhotoImage(im)
+        tmp_image = Image.open("tmp.jpg")
+        photo = ImageTk.PhotoImage(tmp_image)
         label = tk.Label(root, image=photo)
         os.remove("tmp.jpg")
         # for i in range(11):
@@ -121,7 +121,7 @@ class Mygui:
         # 生成空格
         for i in range(11):
             for j in range(11):
-                if 3 != i and 7 != i and 3 != j and 7 != j:
+                if i != 3 and i != 7 and j != 3 and j != 7:
                     self.value[i][j] = tk.StringVar()
                     self.ety[i][j] = tk.Entry(root, textvariable=self.value[i][j], width=2, font=90)
                     self.ety[i][j].grid(row=i, column=j, padx=12, pady=12, sticky='NSEW')
@@ -132,11 +132,11 @@ class Mygui:
         label.grid(row=0, column=0, rowspan=12, columnspan=11, sticky='NSEW')
 
         # 确定按钮
-        submit_btn = tk.Button(root, text='OK', command=lambda: self.check())
+        submit_btn = tk.Button(root, text='OK', command=lambda:self.check())
         submit_btn.grid(row=11, column=9, pady=10, ipadx=30, columnspan=2)
 
         # next按钮
-        next_btn = tk.Button(root, text='Next>', command=lambda: self.bind())
+        next_btn = tk.Button(root, text='Next>', command=lambda:self.bind())
         next_btn.grid(row=11, column=0, pady=10, ipadx=20, columnspan=2)
 
         root.mainloop()

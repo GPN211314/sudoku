@@ -3,7 +3,6 @@
 
 import sys
 from libc.stdio cimport FILE, fopen, fclose, fputs, fgets, feof, fputc
-import time
 
 cdef class SD:
     cdef FILE* sudoku
@@ -11,7 +10,7 @@ cdef class SD:
     cdef str flag, arg
     cdef int cur
 
-    def __init__(self, flag = "", arg = ""):
+    def __init__(self, flag="", arg=""):
         # sudoku.txt文件句柄
         self.sudoku = fopen('sudoku.txt', 'w+')
         # 待解数独文件路径或待生成终局数
@@ -195,13 +194,10 @@ cdef class SD:
         fclose(self.sudoku)
 
     def main(self):
-        cdef double time_start = time.time()
         if self.flag == '-c':
             self.create()
         elif self.flag == '-s':
             self.detach()
-        cdef double time_end = time.time()
-        print("总时长：%f s"% (time_end - time_start))
 
 
 cdef int find_part(int row_n, int col_n):
