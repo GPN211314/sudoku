@@ -7,10 +7,10 @@ from libc.stdio cimport FILE, fopen, fclose, fputs, fgets, feof, fputc
 
 cdef class SD:
     cdef FILE* sudoku
-    cdef list first_row, tmp_row, order, a_plz, perm#, mark, row, col, part
+    cdef list first_row, tmp_row, order, a_plz, perm, uncertain_ls#, mark, row, col, part
     cdef str flag, arg
     cdef int cur
-    cdef int count
+    cdef int count, length
     cdef char string[1000200]
     cdef bint mark[11][11], row[11][11], col[11][11], part[11][11]
 
@@ -42,10 +42,13 @@ cdef class SD:
         # self.col = []
         # 记录在各区中各个数值的占用情况
         # self.part = []
+
         # 用来保存单个数独题目
         self.a_plz = []
-
+        # 写文件时计数
         self.count = 0
+        # 记录空位，并把空位按可能解个数从小到大排序
+        self.uncertain_ls = []
 
 
     # 将生成的每一种终局，写入文件
@@ -128,11 +131,13 @@ cdef class SD:
         fclose(self.sudoku)
 
     cdef int find_next(self, int row_n, int col_n, int head):
-        cdef int part_n = find_part(row_n, col_n)
+        cdef int part_n
         cdef int i
         for i in range(head, 10):
-            if self.row[row_n][i] and self.col[col_n][i] and self.part[part_n][i]:
-                return i
+            if self.row[row_n][i] and self.col[col_n][i]:
+                part_n = find_part(row_n, col_n)
+                if self.part[part_n][i]:
+                    return i
         return 0
 
     cdef void rule(self, int row_n, int col_n, bint med):
@@ -154,15 +159,36 @@ cdef class SD:
                     # 非空的将其三个约束列表置False
                     self.rule(i, j, False)
 
-    cdef bint solve(self,int row_n, int col_n):
+    cdef void uncertain(self):
+        cdef dict uncertain_dict={}
+        cdef int part_n
+        cdef int row_n, col_n, i
+        for row_n in range(9):
+            for col_n in range(9):
+                if self.mark[row_n][col_n]:
+                    for i in range(1,10):
+                        if self.row[row_n][i] and self.col[col_n][i]:
+                            part_n = find_part(row_n, col_n)
+                            if self.part[part_n][i]:
+                                if uncertain_dict.has_key((row_n, col_n)):
+                                    uncertain_dict[row_n, col_n] += 1
+                                else:
+                                    uncertain_dict[row_n, col_n] = 0
+        self.uncertain_ls = list(map(lambda xs:xs[0], sorted(uncertain_dict.items(), key=lambda item:item[1])))
+
+
+
+    cdef bint solve(self,int sid):
+        '''
         # 如果当前列超出总列数则进入下一行第一列
-        if col_n == 9:
-            row_n += 1
-            col_n = 0
+        #if col_n == 9:
+        #    row_n += 1
+        #    col_n = 0
         # 直到找到一个空格
         while True:
             # 若遍历完仍没有空，说明已完成填空，返回
-            if row_n > 8:
+            #if row_n > 8:
+            if sid >= self.length:
                 return True
             if self.mark[row_n][col_n]:
                 break
@@ -170,12 +196,17 @@ cdef class SD:
             if col_n == 9:
                 row_n += 1
                 col_n = 0
+        '''
+        cdef int row_n, col_n
+        if sid >= self.length:
+            return True
+        row_n, col_n = self.uncertain_ls[sid]
         while True:
             self.a_plz[row_n][col_n] = self.find_next(row_n, col_n, self.a_plz[row_n][col_n] + 1)
             if self.a_plz[row_n][col_n] == 0:
                 break
             self.rule(row_n, col_n, False)
-            tmp_flag = self.solve(row_n, col_n+1)
+            tmp_flag = self.solve(sid+1)
             if tmp_flag:
                 return True
             self.rule(row_n, col_n, True)
@@ -196,7 +227,9 @@ cdef class SD:
         # self.part = [[True for _ in range(11)] for _ in range(11)]
         # 将所有未填的空标为True
         self.create_mark()
-        if not self.solve(0, 0):
+        self.uncertain()
+        self.length = int(len(self.uncertain_ls))
+        if not self.solve(0):
             print("文件中存在无解数独")
             sys.exit(0)
 
