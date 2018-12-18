@@ -2,10 +2,13 @@
 # coding:utf-8
 import sys
 import sudoku_calc
+
+'''
 from pycallgraph import PyCallGraph
 from pycallgraph.output import GraphvizOutput
 from pycallgraph import Config
 from pycallgraph import GlobbingFilter
+'''
 
 def comb(a_grid, coord_x, coord_y):
     tmp_art = []
@@ -50,9 +53,11 @@ def main(argv):
 
 
 if __name__ == '__main__':
+    '''
     config = Config()
     config.trace_filter = GlobbingFilter(include=[ 'main', 'sudoku_calc.SD.*' ])
     graphviz = GraphvizOutput()
     graphviz.output_file = 'solve.png'
     with PyCallGraph(output=graphviz, config=config):
-        main(sys.argv)
+    '''
+    main(sys.argv)
