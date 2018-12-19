@@ -14,12 +14,13 @@ cdef class SD:
     cdef char string[1000200]
     cdef bint mark[11][11], row[11][11], col[11][11], part[11][11]
 
-    def __init__(self, flag="", arg=""):
+    def __init__(self, flag="", arg="", switch=True):
         # sudoku.txt文件句柄
-        self.sudoku = fopen('sudoku.txt', 'w+')
-        if self.sudoku == NULL:
-            print("打开文件失败")
-            sys.exit(0)
+        if switch:
+            self.sudoku = fopen('sudoku.txt', 'w+')
+            if self.sudoku == NULL:
+                print("打开文件失败")
+                sys.exit(0)
         # 待解数独文件路径或待生成终局数
         self.arg = arg
         # -c -s 参数
