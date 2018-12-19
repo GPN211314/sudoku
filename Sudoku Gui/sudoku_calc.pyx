@@ -205,7 +205,7 @@ cdef class SD:
     cdef void solve_part(self, int sid):
         self.core()
         self.write2file(self.a_plz, sid)
-        if sid > 1000000:
+        if self.count > 1000000:
             self.string[self.count] = 0
             fputs(self.string, self.sudoku)
             self.count = 0
