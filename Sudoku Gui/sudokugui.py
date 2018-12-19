@@ -20,7 +20,7 @@ class Mygui:
         self.coord = []
         self.value = [[0 for i in range(11)] for j in range(11)]
         self.ety = [[0 for i in range(11)] for j in range(11)]
-        self.tmp = sudoku_calc.SD()
+        self.tmp = sudoku_calc.SD(switch=False)
         self.tmp.pmt()
 
     def bind(self):
